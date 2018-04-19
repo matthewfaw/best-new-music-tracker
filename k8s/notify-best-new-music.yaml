@@ -1,0 +1,132 @@
+#apiVersion: batch/v1
+#kind: Job
+#metadata:
+#  name: best-new-music-notifier-8
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: best-new-music-notifier
+spec:
+  schedule: "*/1 * * * *"
+#  suspend: true
+  suspend: false
+  concurrencyPolicy: Replace
+  # a week
+  startingDeadlineSeconds: 604800
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          initContainers:
+          - name: recent-reviews-fetcher
+            image: python:3-alpine
+            envFrom:
+            - configMapRef:
+                name: environment
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+              python /scripts/fetch-recent-reviews.py "$DELIMITER" | tee /out/fetch-recent-reviews.out
+          - name: already-seen-filter
+            image: python:3-alpine
+            envFrom:
+            - configMapRef:
+                name: environment
+            - configMapRef:
+                name: last-seen
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+              python /scripts/filter-already-seen.py /out/fetch-recent-reviews.out "$DELIMITER" "$LAST_SEEN_DATE" "$LAST_SEEN_POSTS" | tee /out/filter-already-seen.out
+          - name: payload-constructor
+            image: python:3-alpine
+            envFrom:
+            - configMapRef:
+                name: environment
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+              python /scripts/create-slack-message.py /out/filter-already-seen.out "$DELIMITER" | tee /out/create-slack-message.out
+          - name: result-poster
+            image: endeveit/docker-jq
+            volumeMounts:
+            - name: scripts-output-dir
+              mountPath: /out
+            envFrom:
+            - secretRef:
+                name: webhooks
+            command:
+            - sh
+            - -c
+            - |
+              echo "Posting the following message to slack:"
+              cat /out/create-slack-message.out | jq '.'
+              if [ $(cat /out/create-slack-message.out | jq '.attachments[]' | wc -l) = 0 ]; then
+                echo "Slack message is empty! Skipping post"
+                exit 0
+              fi
+              curl -X POST -d "$(cat /out/create-slack-message.out)" $SLACK_BEST_NEW_MUSIC_WEBHOOK
+          containers:
+          - name: update-latest
+            image: dtzar/helm-kubectl
+            envFrom:
+            - configMapRef:
+                name: environment
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+              latest_line=$(cat /out/filter-already-seen.out | sort -k5,5 -t "$DELIMITER" | tail -n 1)
+              echo "The latest line is: $latest_line"
+              now=$(date -u +"%Y-%m-%dT%H_%M_%S.000Z")
+              if [ ! -z "$latest_line" ]; then
+                last_seen_date=$(echo $latest_line | cut -d "$DELIMITER" -f 5)
+                echo "Setting new last post date to: $last_seen_date"
+                last_seen_posts=$(grep "$last_seen_date" /out/filter-already-seen.out | cut -d '|' -f 1 | grep -o ".*" | tr '\n' '|' | sed "s/|$//g")
+                echo "Setting new last seen posts to: $last_seen_posts"
+
+                kubectl create cm last-seen --from-literal LAST_SEEN_DATE="$last_seen_date" --from-literal LAST_SEEN_POSTS="$last_seen_posts" --dry-run -o yaml | kubectl apply -f -
+                kubectl label cm last-seen --overwrite last_post=${now}
+              else
+                echo "Determined the latest line to be empty! Doing nothing"
+              fi
+              kubectl label cm last-seen --overwrite last_check=${now}
+
+              printf '=%.0s' `seq 1 100` | xargs
+
+              for file in /out/*; do
+                echo "Printing contents of file: ${file}"
+                printf '=%.0s' `seq 1 100` | xargs
+                cat ${file}
+                printf '=%.0s' `seq 1 100` | xargs
+              done
+          volumes:
+          - name: scripts-dir
+            configMap:
+              name: scripts
+          - name: scripts-output-dir
+            emptyDir: {}
+          restartPolicy: Never

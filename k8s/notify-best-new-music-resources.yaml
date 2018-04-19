@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scripts
+data:
+  fetch-recent-reviews.py: |
+  filter-already-seen.py: |
+  create-slack-message.py: |
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: environment
+data:
+  DELIMITER: "|"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: last-seen
+data:
+  LAST_SEEN_DATE: "1969-12-31T19:00:00.000Z"
+  LAST_SEEN_POSTS: "N/A"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: webhooks
+type: Opaque
+data:
+  SLACK_BEST_NEW_MUSIC_WEBHOOK: <WEBHOOK_URL>
