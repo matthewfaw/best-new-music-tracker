@@ -1,4 +1,4 @@
-import json, sys, time
+import json, sys, datetime
 
 input_file = sys.argv[1]
 delimiter = sys.argv[2]
@@ -14,6 +14,7 @@ with open(input_file) as file:
         genres = data[3]
         pubDate = data[4]
         thumb_url = data[5]
+        authors = data[6]
 
         payload = {
             "color": "#36a64f",
@@ -30,15 +31,10 @@ with open(input_file) as file:
                     "value": genres,
                     "short": "true"
                 },
-                {
-                    "title": "Publish date",
-                    "value": pubDate,
-                    "short": "true"
-                },
             ],
-            "footer": "Best New Music Bot",
+            "footer": "By: " + authors,
             "thumb_url": thumb_url,
-            "ts": time.time()
+            "ts": datetime.datetime.strptime(pubDate,"%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
         }
         loads.append(payload)
 

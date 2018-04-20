@@ -21,6 +21,7 @@ for item in content:
         ", ".join([artist['display_name'] for artist in item['genres']]),
         item['pubDate'],
         item['tombstone']['albums'][0]['album']['photos']['tout']['sizes']['homepageLarge'],
+        ", ".join([author['name'] for author in item['authors']]),
         ""
     ]
     print(delimiter.join(load))
