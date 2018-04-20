@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-SETTINGS=$1
+POST_TYPE=$1
+SETTINGS=$2
 
 if [ -z $SLACK_BEST_NEW_MUSIC_WEBHOOK ]; then
     echo "Missing SLACK_BEST_NEW_MUSIC_WEBHOOK environment variable! Cannot proceed"
@@ -18,9 +19,9 @@ if [ "$SETTINGS" = "with_resources" ]; then
         echo "Populating script: ${script}"
         ./insert_script.sh ${tmpfile} "${script}: " ${script} 4 > ${tmpfile}.tmp && mv ${tmpfile}.tmp ${tmpfile}
     done
-    ./insert_secret.sh ${tmpfile} WEBHOOK_URL $SLACK_BEST_NEW_MUSIC_WEBHOOK | kubectl apply -f -
+    ./insert_secret.sh ${tmpfile} WEBHOOK_URL $SLACK_BEST_NEW_MUSIC_WEBHOOK | sed "s/<POST_TYPE>/$POST_TYPE/g" | kubectl apply -f -
     rm ${tmpfile}
 fi
 
 echo "Creating the job"
-kubectl apply -f k8s/notify-best-new-music.yaml
+cat k8s/notify-best-new-music.yaml | sed "s/<POST_TYPE>/$POST_TYPE/g" | kubectl apply -f -

@@ -5,7 +5,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: best-new-music-notifier
+  name: <POST_TYPE>-notifier
 spec:
   schedule: "*/1 * * * *"
 #  suspend: true
@@ -32,14 +32,14 @@ spec:
             - sh
             - -c
             - |
-              python /scripts/fetch-recent-reviews.py "$DELIMITER" | tee /out/fetch-recent-reviews.out
+              python /scripts/fetch-recent-reviews.py "$DELIMITER" "<POST_TYPE>" | tee /out/fetch-recent-reviews.out
           - name: already-seen-filter
             image: python:3-alpine
             envFrom:
             - configMapRef:
                 name: environment
             - configMapRef:
-                name: last-seen
+                name: last-seen-<POST_TYPE>
             volumeMounts:
             - mountPath: /scripts
               name: scripts-dir
@@ -64,7 +64,7 @@ spec:
             - sh
             - -c
             - |
-              python /scripts/create-slack-message.py /out/filter-already-seen.out "$DELIMITER" | tee /out/create-slack-message.out
+              python /scripts/create-slack-message.py /out/filter-already-seen.out "$DELIMITER" "<POST_TYPE>" | tee /out/create-slack-message.out
           - name: result-poster
             image: endeveit/docker-jq
             volumeMounts:
@@ -72,7 +72,7 @@ spec:
               mountPath: /out
             envFrom:
             - secretRef:
-                name: webhooks
+                name: webhooks-<POST_TYPE>
             command:
             - sh
             - -c
@@ -108,12 +108,13 @@ spec:
                 last_seen_posts=$(grep "$last_seen_date" /out/filter-already-seen.out | cut -d "$DELIMITER" -f 1 | grep -o ".*" | tr '\n' "$DELIMITER" | sed "s/${DELIMITER}\$//g")
                 echo "Setting new last seen posts to: $last_seen_posts"
 
-                kubectl create cm last-seen --from-literal LAST_SEEN_DATE="$last_seen_date" --from-literal LAST_SEEN_POSTS="$last_seen_posts" --dry-run -o yaml | kubectl apply -f -
-                kubectl label cm last-seen --overwrite last_post=${now}
+                kubectl create cm last-seen-<POST_TYPE> --from-literal LAST_SEEN_DATE="$last_seen_date" --from-literal LAST_SEEN_POSTS="$last_seen_posts" --dry-run -o yaml | kubectl apply -f -
+                kubectl label cm last-seen-<POST_TYPE> --overwrite last_post=${now}
               else
                 echo "Determined the latest line to be empty! Doing nothing"
               fi
-              kubectl label cm last-seen --overwrite last_check=${now}
+              echo "Setting last check: $now"
+              kubectl label cm last-seen-<POST_TYPE> --overwrite last_check=${now}
 
               printf '=%.0s' `seq 1 100` | xargs
 

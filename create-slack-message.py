@@ -2,6 +2,17 @@ import json, sys, datetime
 
 input_file = sys.argv[1]
 delimiter = sys.argv[2]
+post_type = sys.argv[3]
+
+username = ""
+if post_type == "bnm":
+    username = "best-new-music-bot"
+elif post_type == "bnr":
+    username = "best-new-record-bot"
+elif post_type == "bnt":
+    username = "best-new-track-bot"
+else:
+    sys.exit("Invalid username!")
 
 with open(input_file) as file:
     loads = []
@@ -39,7 +50,7 @@ with open(input_file) as file:
         loads.append(payload)
 
     message = {
-        "username": "best-new-music-bot",
+        "username": username,
         "icon_emoji": ":p4k:",
         "attachments": loads
     }

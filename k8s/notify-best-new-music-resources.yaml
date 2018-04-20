@@ -17,7 +17,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: last-seen
+  name: last-seen-<POST_TYPE>
 data:
   LAST_SEEN_DATE: "1969-12-31T19:00:00.000Z"
   LAST_SEEN_POSTS: "N/A"
@@ -25,7 +25,7 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: webhooks
+  name: webhooks-<POST_TYPE>
 type: Opaque
 data:
   SLACK_BEST_NEW_MUSIC_WEBHOOK: <WEBHOOK_URL>
