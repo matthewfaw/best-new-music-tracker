@@ -105,7 +105,7 @@ spec:
               if [ ! -z "$latest_line" ]; then
                 last_seen_date=$(echo $latest_line | cut -d "$DELIMITER" -f 5)
                 echo "Setting new last post date to: $last_seen_date"
-                last_seen_posts=$(grep "$last_seen_date" /out/filter-already-seen.out | cut -d '|' -f 1 | grep -o ".*" | tr '\n' '|' | sed "s/|$//g")
+                last_seen_posts=$(grep "$last_seen_date" /out/filter-already-seen.out | cut -d "$DELIMITER" -f 1 | grep -o ".*" | tr '\n' "$DELIMITER" | sed "s/${DELIMITER}\$//g")
                 echo "Setting new last seen posts to: $last_seen_posts"
 
                 kubectl create cm last-seen --from-literal LAST_SEEN_DATE="$last_seen_date" --from-literal LAST_SEEN_POSTS="$last_seen_posts" --dry-run -o yaml | kubectl apply -f -
