@@ -1,3 +1,33 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: music-dealings
+  name: configmap-modifier
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["configmaps"]
+  verbs: ["create", "get", "watch", "list", "patch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: music-notifier
+  namespace: music-dealings
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: configmap-modifier
+  namespace: music-dealings
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: configmap-modifier
+subjects:
+- kind: ServiceAccount
+  name: music-notifier
+  namespace: music-dealings
+---
 #apiVersion: batch/v1
 #kind: Job
 #metadata:
@@ -6,17 +36,18 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: <POST_TYPE>-notifier
+  namespace: music-dealings
 spec:
   schedule: "*/1 * * * *"
 #  suspend: true
   suspend: false
   concurrencyPolicy: Replace
-  # a week
-  startingDeadlineSeconds: 604800
+  startingDeadlineSeconds: 30
   jobTemplate:
     spec:
       template:
         spec:
+          serviceAccountName: music-notifier
           initContainers:
           - name: recent-reviews-fetcher
             image: python:3-alpine

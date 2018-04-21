@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: scripts
+  namespace: music-dealings
 data:
   fetch-recent-reviews.py: |
   filter-already-seen.py: |
@@ -11,6 +12,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: environment
+  namespace: music-dealings
 data:
   DELIMITER: "|"
 ---
@@ -18,6 +20,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: last-seen-<POST_TYPE>
+  namespace: music-dealings
 data:
   LAST_SEEN_DATE: "1969-12-31T19:00:00.000Z"
   LAST_SEEN_POSTS: "N/A"
@@ -26,6 +29,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: webhooks-<POST_TYPE>
+  namespace: music-dealings
 type: Opaque
 data:
   SLACK_BEST_NEW_MUSIC_WEBHOOK: <WEBHOOK_URL>
