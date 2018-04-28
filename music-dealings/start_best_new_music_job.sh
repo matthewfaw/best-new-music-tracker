@@ -2,10 +2,12 @@
 set -e
 
 POST_TYPE=$1
-SETTINGS=$2
+PROVIDER=$2
+SETTINGS=$3
 
+SLACK_BEST_NEW_MUSIC_WEBHOOK=$(eval "echo \$${PROVIDER}_SLACK_BEST_NEW_MUSIC_WEBHOOK")
 if [ -z $SLACK_BEST_NEW_MUSIC_WEBHOOK ]; then
-    echo "Missing SLACK_BEST_NEW_MUSIC_WEBHOOK environment variable! Cannot proceed"
+    echo "Missing ${PROVIDER}_SLACK_BEST_NEW_MUSIC_WEBHOOK environment variable! Cannot proceed"
     exit 1
 fi
 

@@ -30,14 +30,15 @@ if [ -z ${AWS_ACCESS_KEY_ID} ] || \
 fi
 
 kops create cluster \
---name derp.k8s.local \
+--name matthewk8s.k8s.local \
 --state ${KOPS_STATE_STORE} \
 --zones us-east-1a \
 --master-size t2.micro \
 --master-volume-size 8 \
 --node-size t2.micro \
 --node-volume-size 8 \
---topology private \
---networking calico \
 --admin-access ${KOPS_ADMIN_ACCESS_CIDR} \
---dry-run --output yaml
+--yes
+#--dry-run --output yaml
+#--topology private \
+#--networking calico \
