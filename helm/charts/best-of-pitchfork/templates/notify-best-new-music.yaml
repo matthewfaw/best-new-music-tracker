@@ -13,7 +13,7 @@ metadata:
     chart: {{ $.Chart.Name }}-{{ $.Chart.Version | replace "+" "_" }}
     app: {{ template "name" $ }}
 spec:
-  schedule: "*/1 * * * *"
+  schedule: "*/20 * * * *"
 #  suspend: true
   suspend: false
   concurrencyPolicy: Replace
@@ -22,7 +22,7 @@ spec:
     spec:
       template:
         spec:
-          serviceAccountName: music-notifier
+          serviceAccountName: {{ $.Release.Name }}-music-notifier
           initContainers:
           - name: recent-reviews-fetcher
             image: python:3-alpine
@@ -50,6 +50,8 @@ spec:
           - name: result-poster
             image: endeveit/docker-jq
             volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
             - name: scripts-output-dir
               mountPath: /out
             envFrom:
@@ -95,4 +97,5 @@ spec:
           - name: scripts-output-dir
             emptyDir: {}
           restartPolicy: Never
+---
 {{- end }}

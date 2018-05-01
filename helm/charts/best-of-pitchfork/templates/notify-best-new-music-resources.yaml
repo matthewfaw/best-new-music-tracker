@@ -52,4 +52,5 @@ metadata:
 type: Opaque
 data:
   SLACK_BEST_NEW_MUSIC_WEBHOOK: {{ $.Values.webhookUrl | b64enc }}
+---
 {{- end }}
