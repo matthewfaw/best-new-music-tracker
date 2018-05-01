@@ -1,3 +1,6 @@
-postType: bnm
+postTypes:
+  - bnm
+  - bnr
+  - bnt
 # Fill in this value using --set webhookUrl=$WEBHOOK_URL
 webhookUrl: null

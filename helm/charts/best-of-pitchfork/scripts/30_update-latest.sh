@@ -7,13 +7,13 @@ if [ ! -z "$latest_line" ]; then
   last_seen_posts=$(grep "$last_seen_date" /out/filter-already-seen.out | cut -d "$DELIMITER" -f 1 | grep -o ".*" | tr '\n' "$DELIMITER" | sed "s/${DELIMITER}\$//g")
   echo "Setting new last seen posts to: $last_seen_posts"
 
-  kubectl create cm last-seen-{{ .Values.postType }} --from-literal LAST_SEEN_DATE="$last_seen_date" --from-literal LAST_SEEN_POSTS="$last_seen_posts" --dry-run -o yaml | kubectl apply -f -
-  kubectl label cm last-seen-{{ .Values.postType }} --overwrite last_post=${now}
+  kubectl create cm last-seen-${POST_TYPE} --from-literal LAST_SEEN_DATE="$last_seen_date" --from-literal LAST_SEEN_POSTS="$last_seen_posts" --dry-run -o yaml | kubectl apply -f -
+  kubectl label cm last-seen-${POST_TYPE} --overwrite last_post=${now}
 else
   echo "Determined the latest line to be empty! Doing nothing"
 fi
 echo "Setting last check: $now"
-kubectl label cm last-seen-{{ .Values.postType }} --overwrite last_check=${now}
+kubectl label cm last-seen-${POST_TYPE} --overwrite last_check=${now}
 
 printf '=%.0s' `seq 1 100` | xargs
 
