@@ -1,0 +1,1 @@
+python /scripts/fetch-recent-reviews.py "$DELIMITER" "$POST_TYPE" | tee /out/fetch-recent-reviews.out

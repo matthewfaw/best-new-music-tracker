@@ -1,0 +1,155 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ .Release.Name}}-configmap-modifier
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app: {{ template "name" . }}
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["configmaps"]
+  verbs: ["create", "get", "watch", "list", "patch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Release.Name}}-music-notifier
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app: {{ template "name" . }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name}}-configmap-modifier
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app: {{ template "name" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name}}-configmap-modifier
+subjects:
+- kind: ServiceAccount
+  name: {{ .Release.Name}}-music-notifier
+---
+#apiVersion: batch/v1
+#kind: Job
+#metadata:
+#  name: best-new-music-notifier-8
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name}}-{{ .Values.postType }}-notifier
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app: {{ template "name" . }}
+spec:
+  schedule: "*/1 * * * *"
+#  suspend: true
+  suspend: false
+  concurrencyPolicy: Replace
+  startingDeadlineSeconds: 30
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: music-notifier
+          initContainers:
+          - name: recent-reviews-fetcher
+            image: python:3-alpine
+            envFrom:
+            - configMapRef:
+                name: {{ .Release.Name}}-environment
+            env:
+            - name: POST_TYPE
+              value: {{ .Values.postType | quote }}
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+{{ .Files.Get "scripts/recent-reviews-fetcher.sh" | indent 14 }}
+          - name: already-seen-filter
+            image: python:3-alpine
+            envFrom:
+            - configMapRef:
+                name: {{ .Release.Name}}-environment
+            - configMapRef:
+                name: {{ .Release.Name}}-last-seen-{{ .Values.postType }}
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+{{ .Files.Get "scripts/already-seen-filter.sh" | indent 14 }}
+          - name: payload-constructor
+            image: python:3-alpine
+            envFrom:
+            - configMapRef:
+                name: {{ .Release.Name}}-environment
+            env:
+            - name: POST_TYPE
+              value: {{ .Values.postType }}
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+{{ .Files.Get "scripts/payload-constructor.sh" | indent 14 }}
+          - name: result-poster
+            image: endeveit/docker-jq
+            volumeMounts:
+            - name: scripts-output-dir
+              mountPath: /out
+            envFrom:
+            - secretRef:
+                name: {{ .Release.Name}}-webhooks-{{ .Values.postType }}
+            command:
+            - sh
+            - -c
+            - |
+{{ .Files.Get "scripts/result-poster.sh" | indent 14 }}
+          containers:
+          - name: update-latest
+            image: dtzar/helm-kubectl
+            envFrom:
+            - configMapRef:
+                name: {{ .Release.Name}}-environment
+            volumeMounts:
+            - mountPath: /scripts
+              name: scripts-dir
+            - mountPath: /out
+              name: scripts-output-dir
+            command:
+            - sh
+            - -c
+            - |
+{{ .Files.Get "scripts/update-latest.sh" | indent 14 }}
+          volumes:
+          - name: scripts-dir
+            configMap:
+              name: {{ .Release.Name}}-scripts
+          - name: scripts-output-dir
+            emptyDir: {}
+          restartPolicy: Never
